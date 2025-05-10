@@ -21,13 +21,14 @@ dotenv:
   - .env
 
 vars:
-  BASETAG: 3.1.0-mastrogpt
+  BASETAG: 3.1.0-ops-incubating
   TAG:
     sh: git describe --tags --abbrev=0 2>/dev/null || git rev-parse --short HEAD
   GHUSER:
     sh: echo "${GITHUB_USER:-nuvolaris}"
   CONTROLLER_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk-controller
   INVOKER_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk-invoker
+  SCHEDULER_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk-scheduler
   STANDALONE_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk-standalone
   COMMON_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk-common
   ACT: "nothing"
@@ -52,6 +53,7 @@ tasks:
       - echo "common:" {{.COMMON_IMAGE}}:{{.TAG}}
       - echo "controller:" ${MY_CONTROLLER_IMAGE:-{{.CONTROLLER_IMAGE}}}:{{.TAG}}
       - echo "invoker:" ${MY_INVOKER_IMAGE:-{{.INVOKER_IMAGE}}}:{{.TAG}}
+      - echo "scheduler:" ${MY_SCHEDULER_IMAGE:-{{.INVOKER_IMAGE}}}:{{.TAG}}
       - echo "standalone:" ${MY_STANDALONE_IMAGE:-{{.STANDALONE_IMAGE}}}:{{.TAG}}
 
   compile:controller:
@@ -68,6 +70,13 @@ tasks:
     status:
       - test -f core/invoker/build/distributions/invoker.tar
 
+  compile:scheduler:
+    dir: openwhisk
+    cmds:
+      - ./gradlew  :core:scheduler:distTar
+    status:
+      - test -f core/scheduler/build/distributions/scheduler.tar      
+
   compile:standalone:
     dir: openwhisk
     cmds:
@@ -83,17 +92,19 @@ tasks:
     - rm standalone/lib/openwhisk-standalone.jar
     - rm openwhisk/core/invoker/build/distributions/invoker.tar
     - rm openwhisk/core/controller/build/distributions/controller.tar
+    - rm openwhisk/core/scheduler/build/distributions/scheduler.tar
     - docker buildx rm nuvolaris
 
   compile:
     - task: compile:controller
     - task: compile:invoker
+    - task: compile:scheduler
     - task: compile:standalone
 
   docker-setup:
     - docker run -it --rm --userns=host --privileged tonistiigi/binfmt --install all
-    - docker buildx create --name nuvolaris
-    - docker buildx use nuvolaris
+    - docker buildx create --name openserverless
+    - docker buildx use openserverless
 
   docker-login: >
     echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_USER --password-stdin
@@ -147,6 +158,17 @@ tasks:
           IMG: "${MY_INVOKER_IMAGE:-{{.INVOKER_IMAGE}}}:{{.TAG}}"
           ACT: '{{.ACT}}'
           BASE: "{{.COMMON_IMAGE}}:{{.TAG}}"
+
+  build:scheduler:
+    deps:
+    - compile:scheduler
+    cmds:
+      - task: docker-build
+        vars:
+          DIR: openwhisk/core/scheduler
+          IMG: "${MY_SCHEDULER_IMAGE:-{{.SCHEDULER_IMAGE}}}:{{.TAG}}"
+          ACT: '{{.ACT}}'
+          BASE: "{{.COMMON_IMAGE}}:{{.TAG}}"          
   
   build:standalone:
     deps:
@@ -170,6 +192,9 @@ tasks:
     - task: build:invoker
       vars:
          ACT: "build"
+    - task: build:scheduler
+      vars:
+         ACT: "build"         
     - task: build:standalone
       vars:
          ACT: "build"
@@ -184,6 +209,9 @@ tasks:
     - task: build:invoker
       vars:
          ACT: "buildx-push"
+    - task: build:scheduler
+      vars:
+         ACT: "buildx-push"         
     - task: build:standalone
       vars:
          ACT: "buildx-push"

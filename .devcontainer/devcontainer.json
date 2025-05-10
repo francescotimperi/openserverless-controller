@@ -1,4 +1,4 @@
-// Licensed to the Apache Software Foundation (ASF) under one
+//  Licensed to the Apache Software Foundation (ASF) under one
 // or more contributor license agreements.  See the NOTICE file
 // distributed with this work for additional information
 // regarding copyright ownership.  The ASF licenses this file
@@ -14,26 +14,25 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-//
 {
-	"folders": [
-		{
-			"path": "openwhisk"
-		},
-		{
-			"path": ".devcontainer"
-		}
+	"name": "openserverless",
+	"image": "ghcr.io/francescotimperi/devow:ops.25051013",
+	//"build": { "dockerfile": "Dockerfile" },
+	"mounts": [
+		"source=/var/run/docker.sock,target=/var/run/docker-host.sock,type=bind"
 	],
-	"settings": {
-		"workbench.colorCustomizations": {
-			"activityBar.background": "#520F4E",
-			"titleBar.activeBackground": "#72156D",
-			"titleBar.activeForeground": "#FEFCFE"
-		},
-		"files.watcherExclude": {
-			"**/target": true
-		},
-		"java.configuration.updateBuildConfiguration": "interactive",
-		"java.compile.nullAnalysis.mode": "automatic"
-	}
+	"remoteUser": "openserverless",
+	"overrideCommand": false,
+	"extensions": [
+		"stuart.unique-window-colors",
+		"oderwat.indent-rainbow",
+		"eamodio.gitlens",
+		"mhutchie.git-graph",
+		"scalameta.metals", 
+		"vscjava.vscode-java-test"
+	],
+	"runArgs": [
+			"--network", "host",
+			"--add-host", "host.docker.internal:127.0.0.1"
+	]
 }
