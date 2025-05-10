@@ -93,7 +93,7 @@ tasks:
     - rm openwhisk/core/invoker/build/distributions/invoker.tar
     - rm openwhisk/core/controller/build/distributions/controller.tar
     - rm openwhisk/core/scheduler/build/distributions/scheduler.tar
-    - docker buildx rm nuvolaris
+    - docker buildx rm openserverless
 
   compile:
     - task: compile:controller
