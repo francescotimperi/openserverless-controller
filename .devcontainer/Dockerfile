@@ -51,11 +51,9 @@ RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/d
 #    chmod +x /usr/bin/cs ;\
 #    cs install bloop --only-prebuilt=true --install-dir /usr/local/bin
 # user
+
 # protobuf setup
-RUN wget https://github.com/protocolbuffers/protobuf/releases/download/v3.4.0/protoc-3.4.0-linux-x86_64.zip; \
-    unzip protoc-3.4.0-linux-x86_64.zip -d protoc-3.4.0; \
-    mv protoc-3.4.0/bin/protoc /usr/local/bin/; \
-    mv protoc-3.4.0/include/* /usr/local/include/
+RUN apt-get -y install protobuf-compiler
     
 RUN useradd -m openserverless -s /bin/bash ;\
     echo "openserverless ALL=(ALL:ALL) NOPASSWD: ALL" >>/etc/sudoers

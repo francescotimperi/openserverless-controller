@@ -25,7 +25,7 @@ vars:
   TAG:
     sh: git describe --tags --abbrev=0 2>/dev/null || git rev-parse --short HEAD
   GHUSER:
-    sh: echo "${GITHUB_USER:-nuvolaris}"
+    sh: echo "${GITHUB_USER:-francescotimperi}"
   CONTROLLER_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk-controller
   INVOKER_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk-invoker
   SCHEDULER_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk-scheduler
@@ -117,13 +117,13 @@ tasks:
       echo "***" {{.ACT}} for {{.IMG}} in {{.DIR}}
       case "{{.ACT}}" in
       (build)
-      docker build {{.DIR}} -t {{.IMG}} --build-arg BASE={{.BASE}} --push
+      docker build {{.DIR}} -t {{.IMG}} --build-arg OW_BASE_IMAGE={{.BASE}} --push
       ;;
       (buildx) 
-      docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE={{.BASE}} -t {{.IMG}} {{.DIR}}
+      docker buildx build --platform linux/amd64,linux/arm64 --build-arg OW_BASE_IMAGE={{.BASE}} -t {{.IMG}} {{.DIR}}
       ;;
       (buildx-push) 
-      docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE={{.BASE}} -t {{.IMG}} {{.DIR}} --push 
+      docker buildx build --platform linux/amd64,linux/arm64 --build-arg OW_BASE_IMAGE={{.BASE}} -t {{.IMG}} {{.DIR}} --push 
       ;;
       (*) echo ACT must be "build|buildx|buildx-push"
       esac
@@ -133,9 +133,10 @@ tasks:
       - task: docker-build
         vars:
           DIR: openwhisk/common/scala
-          IMG: "{{.COMMON_IMAGE}}:{{.TAG}}"
+          #IMG: "{{.COMMON_IMAGE}}:{{.TAG}}"
+          IMG: "{{.COMMON_IMAGE}}:latest"
           ACT: '{{.ACT}}'
-          BASE: "{{.COMMON_IMAGE}}:{{.TAG}}" # not used
+          BASE: "{{.COMMON_IMAGE}}:latest" # not used
 
   build:controller:
     deps:
@@ -146,7 +147,7 @@ tasks:
           DIR: openwhisk/core/controller
           IMG: "${MY_CONTROLLER_IMAGE:-{{.CONTROLLER_IMAGE}}}:{{.TAG}}"
           ACT: '{{.ACT}}'
-          BASE: "{{.COMMON_IMAGE}}:{{.TAG}}"
+          BASE: "{{.COMMON_IMAGE}}:latest"
  
   build:invoker:
     deps:
@@ -157,7 +158,7 @@ tasks:
           DIR: openwhisk/core/invoker
           IMG: "${MY_INVOKER_IMAGE:-{{.INVOKER_IMAGE}}}:{{.TAG}}"
           ACT: '{{.ACT}}'
-          BASE: "{{.COMMON_IMAGE}}:{{.TAG}}"
+          BASE: "{{.COMMON_IMAGE}}:latest"
 
   build:scheduler:
     deps:
@@ -168,7 +169,7 @@ tasks:
           DIR: openwhisk/core/scheduler
           IMG: "${MY_SCHEDULER_IMAGE:-{{.SCHEDULER_IMAGE}}}:{{.TAG}}"
           ACT: '{{.ACT}}'
-          BASE: "{{.COMMON_IMAGE}}:{{.TAG}}"          
+          BASE: "{{.COMMON_IMAGE}}:latest"          
   
   build:standalone:
     deps:
@@ -179,7 +180,7 @@ tasks:
           DIR: standalone
           IMG: "${MY_STANDALONE_IMAGE:-{{.STANDALONE_IMAGE}}}:{{.TAG}}"
           ACT: '{{.ACT | or "build"}}'
-          BASE: "{{.COMMON_IMAGE}}:{{.TAG}}"
+          BASE: "{{.COMMON_IMAGE}}:latest"
   
   build-all:
     cmds:
