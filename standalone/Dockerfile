@@ -16,13 +16,13 @@
 # under the License.
 #
 FROM ubuntu:20.04
-LABEL maintainer="Michele Sciabarra michele@nuvolaris.io"
+LABEL maintainer="Michele Sciabarra michele@nuvolaris.io, Francesco Timperi Tiberi francesco.timperi@gmail.com"
 # configure dpkg && timezone
 ENV TZ=Europe/London
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections ;\
     ln -snf /usr/share/zoneinfo/$TZ /etc/localtime ;\
     echo $TZ > /etc/timezone ;\
-    useradd -m -d /home nuvolaris
+    useradd -m -d /home openserverless
 # add docker and java (amazon corretto) repos
 RUN apt-get update && apt-get -y upgrade &&\
     apt-get -y install \
@@ -37,14 +37,18 @@ RUN wget -O- https://apt.corretto.aws/corretto.key | apt-key add - ;\
 RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu bionic stable" > /etc/apt/sources.list.d/docker.list ;\
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor > /usr/share/keyrings/docker-archive-keyring.gpg ;\
     apt-get update && apt-get -y install docker-ce-cli
+RUN WSK_VERSION=1.2.0 && \
+    ARCH="$(dpkg --print-architecture)" && \
+    WSK_BASE=https://github.com/apache/openwhisk-cli/releases/download && \
+    curl -sL "$WSK_BASE/$WSK_VERSION/OpenWhisk_CLI-$WSK_VERSION-linux-$ARCH.tgz" | tar xzvf - -C /usr/bin/    
 WORKDIR /home
 ENV HOME=/home
 RUN mkdir -p /home/etc/ /home/lib/ /home/bin/
 ADD lib/* /home/lib/
 ADD bin/* /home/bin/
 ADD etc/* /home/etc/
-RUN chown -Rvf nuvolaris:root /home ;\
+RUN chown -Rvf openserverless:root /home ;\
     chgrp -R root /home ;\
     chmod -R g=u /home
-USER nuvolaris
+USER openserverless
 ENTRYPOINT ["/bin/bash", "/home/bin/standalone"]
