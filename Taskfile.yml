@@ -1,0 +1,190 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+version: '3'
+
+dotenv: 
+  - .env
+
+vars:
+  BASETAG: 3.1.0-mastrogpt
+  TAG:
+    sh: git describe --tags --abbrev=0 2>/dev/null || git rev-parse --short HEAD
+  GHUSER:
+    sh: echo "${GITHUB_USER:-nuvolaris}"
+  CONTROLLER_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk-controller
+  INVOKER_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk-invoker
+  STANDALONE_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk-standalone
+  COMMON_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk-common
+  ACT: "nothing"
+  S: ""
+
+tasks:
+
+  default:
+    - task --list-all
+  setup: 
+    silent: true
+
+  image-tag:
+    - git tag -d $(git tag)
+    - git tag -f {{.BASETAG}}.$(date +%y%m%d%H%M){{.S}}
+    - task show
+
+  show:
+    silent: true
+    cmds:
+      - echo "tag:" {{.TAG}}
+      - echo "common:" {{.COMMON_IMAGE}}:{{.TAG}}
+      - echo "controller:" ${MY_CONTROLLER_IMAGE:-{{.CONTROLLER_IMAGE}}}:{{.TAG}}
+      - echo "invoker:" ${MY_INVOKER_IMAGE:-{{.INVOKER_IMAGE}}}:{{.TAG}}
+      - echo "standalone:" ${MY_STANDALONE_IMAGE:-{{.STANDALONE_IMAGE}}}:{{.TAG}}
+
+  compile:controller:
+    dir: openwhisk
+    cmds:
+      - ./gradlew  :core:controller:distTar
+    status:
+      - test -f core/controller/build/distributions/controller.tar
+
+  compile:invoker:
+    dir: openwhisk
+    cmds:
+      - ./gradlew  :core:invoker:distTar
+    status:
+      - test -f core/invoker/build/distributions/invoker.tar
+
+  compile:standalone:
+    dir: openwhisk
+    cmds:
+      - ./gradlew :core:standalone:build
+      - mkdir -p ../standalone/lib
+      - cp bin/openwhisk-standalone.jar ../standalone/lib/
+    status:
+      - test -f ../standalone/lib/openwhisk-standalone.jar
+
+  clean:
+    ignore_error: true
+    cmds:
+    - rm standalone/lib/openwhisk-standalone.jar
+    - rm openwhisk/core/invoker/build/distributions/invoker.tar
+    - rm openwhisk/core/controller/build/distributions/controller.tar
+    - docker buildx rm nuvolaris
+
+  compile:
+    - task: compile:controller
+    - task: compile:invoker
+    - task: compile:standalone
+
+  docker-setup:
+    - docker run -it --rm --userns=host --privileged tonistiigi/binfmt --install all
+    - docker buildx create --name nuvolaris
+    - docker buildx use nuvolaris
+
+  docker-login: >
+    echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_USER --password-stdin
+
+  # this requires ACT IMG and DIR parameters to be passed
+  docker-build:
+    silent: true
+    cmds:
+    - |-
+      echo "***" {{.ACT}} for {{.IMG}} in {{.DIR}}
+      case "{{.ACT}}" in
+      (build)
+      docker build {{.DIR}} -t {{.IMG}} --build-arg BASE={{.BASE}} --push
+      ;;
+      (buildx) 
+      docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE={{.BASE}} -t {{.IMG}} {{.DIR}}
+      ;;
+      (buildx-push) 
+      docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE={{.BASE}} -t {{.IMG}} {{.DIR}} --push 
+      ;;
+      (*) echo ACT must be "build|buildx|buildx-push"
+      esac
+
+  build:scala:
+    cmds:
+      - task: docker-build
+        vars:
+          DIR: openwhisk/common/scala
+          IMG: "{{.COMMON_IMAGE}}:{{.TAG}}"
+          ACT: '{{.ACT}}'
+          BASE: "{{.COMMON_IMAGE}}:{{.TAG}}" # not used
+
+  build:controller:
+    deps:
+    - compile:controller
+    cmds:
+      - task: docker-build
+        vars:
+          DIR: openwhisk/core/controller
+          IMG: "${MY_CONTROLLER_IMAGE:-{{.CONTROLLER_IMAGE}}}:{{.TAG}}"
+          ACT: '{{.ACT}}'
+          BASE: "{{.COMMON_IMAGE}}:{{.TAG}}"
+ 
+  build:invoker:
+    deps:
+    - compile:invoker
+    cmds:
+      - task: docker-build
+        vars:
+          DIR: openwhisk/core/invoker
+          IMG: "${MY_INVOKER_IMAGE:-{{.INVOKER_IMAGE}}}:{{.TAG}}"
+          ACT: '{{.ACT}}'
+          BASE: "{{.COMMON_IMAGE}}:{{.TAG}}"
+  
+  build:standalone:
+    deps:
+    - compile:standalone
+    cmds:
+      - task: docker-build
+        vars:
+          DIR: standalone
+          IMG: "${MY_STANDALONE_IMAGE:-{{.STANDALONE_IMAGE}}}:{{.TAG}}"
+          ACT: '{{.ACT | or "build"}}'
+          BASE: "{{.COMMON_IMAGE}}:{{.TAG}}"
+  
+  build-all:
+    cmds:
+    - task: build:scala
+      vars:
+         ACT: "build" 
+    - task: build:controller
+      vars:
+         ACT: "build"      
+    - task: build:invoker
+      vars:
+         ACT: "build"
+    - task: build:standalone
+      vars:
+         ACT: "build"
+
+  buildx-and-push:
+    - task: build:scala
+      vars:
+         ACT: "buildx-push" 
+    - task: build:controller
+      vars:
+         ACT: "buildx-push"      
+    - task: build:invoker
+      vars:
+         ACT: "buildx-push"
+    - task: build:standalone
+      vars:
+         ACT: "buildx-push"
+

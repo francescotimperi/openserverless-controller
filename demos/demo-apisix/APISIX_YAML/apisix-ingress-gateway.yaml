@@ -1,0 +1,76 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-issuer
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-body-size: 48m
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+  name: apisixgateway
+  namespace: nuvolaris
+spec:
+  rules:
+  - host: nuvolaris.dynamicsconsulting.it
+    http:
+      paths:
+      - backend:
+          service:
+            name: apisix-gateway
+            port:
+              number: 9081
+        path: /gateway(/|$)(.*)
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - nuvolaris.dynamicsconsulting.it
+    secretName: nuvolaris-crt
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-issuer
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-body-size: 48m
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+  name: apisixdashboard
+  namespace: nuvolaris
+spec:
+  rules:
+  - host: admin.nuvolaris.dynamicsconsulting.it
+    http:
+      paths:
+      - backend:
+          service:
+            name: apisix-dashboard
+            port:
+              number: 9011
+        path: /
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - admin.nuvolaris.dynamicsconsulting.it
+    secretName: admin-nuvolaris-crt

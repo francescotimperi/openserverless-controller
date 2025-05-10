@@ -1,0 +1,122 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+version: '3'
+vars:
+  MILESTONE: morpheus
+  REPO: ghcr.io
+  USER: nuvolaris
+  TAG:
+    sh: git describe --tags --abbrev=0 2>/dev/null || echo {{.MILESTONE}}-latest
+  CONTROLLER_IMAGE: "{{.REPO}}/{{.USER}}/openwhisk-controller"
+  INVOKER_IMAGE: "{{.REPO}}/{{.USER}}/openwhisk-invoker"
+  WHISK_SYSTEM: "789c46b1-71f6-4ed5-8c54-816aa4f8c502:abczO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP"
+  GUEST: "23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP"
+
+tasks:
+
+  compile:controller:
+    dir: ../openwhisk
+    cmds:
+      - ./gradlew distTar
+      - >
+        tar xvf core/controller/build/distributions/controller.tar 
+        -C ../enterprise/controller --strip-components=1
+    status:
+      - test -d ../enterprise/controller/lib
+
+  compile:invoker:
+    dir: ../openwhisk
+    cmds:
+      - ./gradlew distTar
+      - >
+        tar xvf core/invoker/build/distributions/invoker.tar 
+        -C ../enterprise/invoker --strip-components=1
+    status:
+      - test -d ../enterprise/controller/lib
+
+  compile:
+    - task: compile:invoker
+    - task: compile:controller
+
+  build:invoker:
+    deps:
+      - compile:invoker
+    cmds:
+      - docker build -t {{.INVOKER_IMAGE}}:{{.TAG}} invoker
+
+  build:controller:
+    deps:
+      - compile:controller
+    cmds:
+      - docker build -t {{.CONTROLLER_IMAGE}}:{{.TAG}} controller
+
+  build:
+    - task: build:invoker
+    - task: build:controller
+
+  compile:admin:
+    dir: ../openwhisk
+    deps:
+      - controller
+    cmds:
+      - ./gradlew :tools:admin:build
+      - cp bin/wskadmin-next ../controller/bin/
+    status:
+      - test -f ../controller/bin/wskadmin-next
+
+  build-and-load:
+    deps:
+      - build
+    cmds:
+      - kind load docker-image {{.CONTROLLER_IMAGE}}:{{.TAG}} --name=nuvolaris
+      - kind load docker-image {{.INVOKER_IMAGE}}:{{.TAG}} --name=nuvolaris
+
+  clean: 
+    - cd ../openwhisk && ./gradlew clean 
+
+  mini-clean:
+    - rm -f ../openwhisk/core/invoker/build/distributions/controller.tar
+    - rm -f ../openwhisk/core/invoker/build/distributions/invoker.tar
+    - rm -rvf controller/bin controller/lib
+    - rm -rvf invoker/bin invoker/lib
+
+  buildx-and-push:
+    deps:
+     - compile
+    cmds:
+      - docker buildx build --platform linux/amd64,linux/arm64 -t {{.CONTROLLER_IMAGE}}:{{.TAG}} controller  --push
+      - docker buildx build --platform linux/amd64,linux/arm64 -t {{.INVOKER_IMAGE}}:{{.TAG}} invoker  --push
+
+  run:
+    deps:
+      - compile
+    cmds:
+      - bash -x controller/bin/controller 0
+    env:
+      CONTROLLER_OPTS: >
+        -Dconfig.file=etc/standalone.conf
+        -Dwhisk-config.whisk.api.host.name={{.HOSTNAME}}
+        -Dwhisk-config.runtimes.manifest='{{.RUNTIMES}}'
+        -Dwhisk-config.port=8080
+        -Dwhisk-config.whisk.api.host.port=8080
+        -Dwhisk-config.whisk.api.host.proto=http
+        -Dwhisk-config.controller.instances=1
+        -Dwhisk-config.limits.actions.invokes.concurrent=30
+        -Dwhisk-config.limits.actions.invokes.perMinute=60
+        -Dwhisk-config.limits.triggers.fires.perMinute=60
+        -Dwhisk-config.limits.actions.sequence.maxLength=50
