@@ -50,6 +50,12 @@
       "pattern":"playground/ui/playgroundFunctions.js"
     }, 
     {
+      "pattern":"playground/ui/index.html"
+    },
+    {
+      "pattern":"playground/ui/playground.css"
+    },    
+    {
       "pattern":"reference.conf"
     }, 
     {

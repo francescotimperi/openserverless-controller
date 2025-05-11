@@ -107,6 +107,11 @@ tasks:
       -o /workspaces/openserverless-controller/standalone/exe/openwhisk-standalone.exe
       org.apache.openwhisk.standalone.StandaloneOpenWhisk 
 
+  native:standalone-run:
+    dir: standalone/exe
+    cmds:
+    - ./openwhisk-standalone.exe -Dwhisk.standalone.host.name="0.0.0.0" -Dwhisk.standalone.host.internal="$(hostname -f)" --no-browser --disable-color-logging
+
   native:standalone-config:
     deps:
     - compile:standalone  
