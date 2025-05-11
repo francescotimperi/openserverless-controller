@@ -86,6 +86,38 @@ tasks:
     status:
       - test -f ../standalone/lib/openwhisk-standalone.jar
 
+  native:standalone-libs:
+    dir: openwhisk
+    cmds:
+      - ./gradlew core:standalone:copyRuntimeLibs    
+
+  native:standalone-build:
+    deps:
+    - compile:standalone
+    - native:standalone-libs   
+    dir: openwhisk/core/standalone
+    cmds:
+    - native-image
+      --initialize-at-run-time=io.netty     
+      --no-fallback --report-unsupported-elements-at-runtime
+      --trace-object-instantiation=ch.qos.logback.classic.Logger
+      --enable-url-protocols=http,https
+      -cp build/classes/scala/main:build/resources/main:build/dependency-libs/*
+      -H:ConfigurationFileDirectories=/workspaces/openserverless-controller/standalone/graal-config
+      -o /workspaces/openserverless-controller/standalone/exe/openwhisk-standalone.exe
+      org.apache.openwhisk.standalone.StandaloneOpenWhisk 
+
+  native:standalone-config:
+    deps:
+    - compile:standalone  
+    dir: openwhisk/core/standalone
+    cmds:
+    - java -agentlib:native-image-agent=config-output-dir=../../standalone/graal-config      
+      -cp build/classes/scala/main:build/resources/main:build/dependency-libs/*      
+      -Dwhisk.standalone.host.name="0.0.0.0"
+      -Dwhisk.standalone.host.internal="$(hostname -f)"    
+      org.apache.openwhisk.standalone.StandaloneOpenWhisk 
+
   clean:
     ignore_error: true
     cmds:

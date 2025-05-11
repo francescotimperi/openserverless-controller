@@ -25,6 +25,7 @@ enterprise/controller/bin/
 enterprise/invoker/lib/
 enterprise/invoker/bin/
 standalone/lib/
+standalone/exe/
 export/
 results/
 openwhisk-*/

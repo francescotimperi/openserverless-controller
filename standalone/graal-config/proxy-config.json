@@ -1,0 +1,5 @@
+[
+  {
+    "interfaces":["oshi.jna.platform.linux.LinuxLibc"]
+  }
+]
