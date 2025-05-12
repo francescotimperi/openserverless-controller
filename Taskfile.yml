@@ -26,11 +26,11 @@ vars:
     sh: git describe --tags --abbrev=0 2>/dev/null || git rev-parse --short HEAD
   GHUSER:
     sh: echo "${GITHUB_USER:-francescotimperi}"
-  CONTROLLER_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk-controller
-  INVOKER_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk-invoker
-  SCHEDULER_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk-scheduler
-  STANDALONE_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk-standalone
-  COMMON_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk-common
+  CONTROLLER_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk2-controller
+  INVOKER_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk2-invoker
+  SCHEDULER_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk2-scheduler
+  STANDALONE_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk2-standalone
+  COMMON_IMAGE: ghcr.io/{{.GHUSER}}/openwhisk2-common
   ACT: "nothing"
   S: ""
 
@@ -170,10 +170,10 @@ tasks:
       - task: docker-build
         vars:
           DIR: openwhisk/common/scala
-          #IMG: "{{.COMMON_IMAGE}}:{{.TAG}}"
-          IMG: "{{.COMMON_IMAGE}}:latest"
+          IMG: "{{.COMMON_IMAGE}}:{{.TAG}}"          
           ACT: '{{.ACT}}'
           BASE: "{{.COMMON_IMAGE}}:latest" # not used
+      - docker tag {{.COMMON_IMAGE}}:{{.TAG}} scala:latest     
 
   build:controller:
     deps:
