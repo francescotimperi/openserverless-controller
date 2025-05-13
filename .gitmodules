@@ -1,4 +1,1 @@
 
-[submodule "openwhisk"]
-	path = openwhisk
-	url = git@github.com:francescotimperi/openwhisk.git
