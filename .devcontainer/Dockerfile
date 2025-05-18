@@ -34,7 +34,7 @@ RUN apt-get update && apt-get -y upgrade &&\
     socat telnet inetutils-ping \
     unzip vim telnet less sudo git \
     python3 python3-pip gcc g++ make \
-    silversearcher-ag
+    silversearcher-ag zip
 # install java (amazon corretto) and libs
 RUN pip3 install --upgrade pip setuptools six 
 # python2 stuff

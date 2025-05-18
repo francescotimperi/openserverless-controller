@@ -16,11 +16,11 @@
 // under the License.
 {
 	"name": "openserverless",
-	//"image": "ghcr.io/francescotimperi/devow:ops.25051014",
-	"image": "ghcr.io/francescotimperi/devow:ops.25051024",
+	"image": "ghcr.io/francescotimperi/devow:ops.25051811",
 	//"build": { "dockerfile": "Dockerfile" },
 	"mounts": [
-		"source=/var/run/docker.sock,target=/var/run/docker-host.sock,type=bind"
+		"source=/var/run/docker.sock,target=/var/run/docker-host.sock,type=bind",
+		"type=bind,source=${env:HOME}/.ssh,target=/home/openserverless/.ssh"
 	],
 	"remoteUser": "openserverless",
 	"overrideCommand": false,
