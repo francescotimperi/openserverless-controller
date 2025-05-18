@@ -34,7 +34,7 @@ RUN apt-get update && apt-get -y upgrade &&\
     socat telnet inetutils-ping \
     unzip vim telnet less sudo git \
     python3 python3-pip gcc g++ make \
-    silversearcher-ag zip
+    silversearcher-ag zip lsof
 # install java (amazon corretto) and libs
 RUN pip3 install --upgrade pip setuptools six 
 # python2 stuff
@@ -90,6 +90,9 @@ RUN curl -sL https://deb.nodesource.com/setup_22.x | bash ;\
     apt-get update && sudo apt-get install yarn
 # task
 RUN sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+# act github actions verifier
+RUN curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
+
 ENV HOME=/home/openserverless
 ENV ANSIBLE_CMD="ansible-playbook -i environments/local -e docker_image_prefix=testing"
 ENV GRADLE_PROJS_SKIP=""

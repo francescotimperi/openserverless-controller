@@ -254,3 +254,35 @@ tasks:
       vars:
          ACT: "buildx-push"
 
+  actions:ow-unit-test:
+    dir: openwhisk
+    cmds:
+    - act -P ubuntu-22.04=ghcr.io/catthehacker/ubuntu:full-22.04 -v --env TEST_SUITE=Unit -W '.github/workflows/1-unit.yaml'
+
+  actions:ow-system-test:
+    dir: openwhisk
+    cmds:
+    - act -P ubuntu-22.04=ghcr.io/catthehacker/ubuntu:full-22.04 -v --env TEST_SUITE=System -W '.github/workflows/2-system.yaml'
+
+  actions:ow-multiruntime-test:
+    dir: openwhisk
+    cmds:
+    - act -P ubuntu-22.04=ghcr.io/catthehacker/ubuntu:full-22.04 -v --env TEST_SUITE=MultiRuntime -W '.github/workflows/4-multi-runtime.yaml'     
+
+  actions:ow-standalone-test:
+    dir: openwhisk
+    cmds:
+    - act -P ubuntu-22.04=ghcr.io/catthehacker/ubuntu:full-22.04 -v --env TEST_SUITE=Standalone -W '.github/workflows/4-standalone.yaml' 
+
+  actions:ow-scheduler-test:
+    dir: openwhisk
+    cmds:
+    - act -P ubuntu-22.04=ghcr.io/catthehacker/ubuntu:full-22.04 -v --env TEST_SUITE=scheduler -W '.github/workflows/5-scheduler.yaml'
+
+  distdocker:
+    dir: openwhisk
+    cmds:
+    - ./gradlew distDocker -PdockerRegistry=ghcr.io/{{.GHUSER}} -PdockerImagePrefix=openwhisk2 -PdockerImageTag={{.TAG}}  -PdockerMultiArchBuild=true
+
+
+
